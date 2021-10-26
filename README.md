@@ -6,7 +6,7 @@ The purpose of this script is to capture ports generating CRC or FCS errors in A
 ACI switches run in cut-through switching mode. Whenever switch receives corrupt frame, it stomps the packet and keeps forwarding it.  
 If the error gets generated in ACI itself, then it stomps the packet; as well adds FCS Error counter.  
 If interface only has CRC counters, then it could be because of stomped packets and is usually not the source of error.  
-Reference Document on ACI CRC+FCS Error Troubleshooting: https://techzone.cisco.com/t5/Application-Centric/Troubleshooting-CRC-and-Input-Output-Errors-on-ACI/ta-p/1321321  
+
 
 ---
 
