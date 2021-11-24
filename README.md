@@ -9,7 +9,11 @@ If interface only has CRC counters, then it could be because of stomped packets 
 
 
 ---
+**Demo of script execution and sample output available at:***
+https://www.cisco.com/c/en/us/support/docs/cloud-systems-management/application-policy-infrastructure-controller-apic/217577-how-to-use-fcs-and-crc-troubleshooting-s.html
 
+
+---
 **Prerequisites on client machine from where script will be executed:**  
 
 1. Python3  
