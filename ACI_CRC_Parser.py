@@ -183,7 +183,7 @@ def parse_file1(file1):
             pod_id = re.search('pod-\d*', key).group().split('-')[1]
             node_id = re.search('node-\d*', key).group().split('-')[1]
             interface = (
-                re.search('phys-\[\w*/\d*\]', key).group().split('-')[1]).replace("[", "")
+                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
             interface = interface.replace("]", "")
             total_rows = table.shape[0]
             table.loc[total_rows, 'POD_ID'] = pod_id
@@ -196,7 +196,7 @@ def parse_file1(file1):
                       file1_list[k].split(":")[1])).lstrip()
         if "phys" in key:
             interface = (
-                re.search('phys-\[\w*/\d*\]', key).group().split('-')[1]).replace("[", "")
+                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
             interface = interface.replace("]", "")
             pod_id = re.search('pod-\d*', key).group().split('-')[1]
             node_id = re.search('node-\d*', key).group().split('-')[1]
@@ -230,7 +230,7 @@ def parse_file2(file2):
             pod_id = re.search('pod-\d*', key).group().split('-')[1]
             node_id = re.search('node-\d*', key).group().split('-')[1]
             interface = (
-                re.search('phys-\[\w*/\d*\]', key).group().split('-')[1]).replace("[", "")
+                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
             interface = interface.replace("]", "")
             index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
                               & (table.INTERFACE == interface)]
@@ -254,7 +254,7 @@ def parse_file2(file2):
                       file2_list[k].split(":")[1])).lstrip()
         if "phys" in key:
             interface = (
-                re.search('phys-\[\w*/\d*\]', key).group().split('-')[1]).replace("[", "")
+                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
             interface = interface.replace("]", "")
             pod_id = re.search('pod-\d*', key).group().split('-')[1]
             node_id = re.search('node-\d*', key).group().split('-')[1]
