@@ -171,124 +171,178 @@ def create_table_columns(file1, file2):
 def parse_file1(file1):
     fp = open(LOCAL_PATH+file1, "r")
     file1_list = fp.readlines()
-
-    for i in range(1, len(file1_list), 2):
-        # This condition is to break the loop if its finds FCS Errors or there is no CRC output in the file
-        if file1_list[i].startswith("#FCS") or file1_list[i-1].startswith("#FCS"):
-            break
-        val = int(re.sub(r"[\n\t]*", "", file1_list[i].split(":")[1]))
-        key = (re.sub(r"[\n\t]*", "",
-                      file1_list[i+1].split(":")[1])).lstrip()
-        if "phys" in key:
-            pod_id = re.search('pod-\d*', key).group().split('-')[1]
-            node_id = re.search('node-\d*', key).group().split('-')[1]
-            interface = (
-                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
-            interface = interface.replace("]", "")
-            total_rows = table.shape[0]
-            table.loc[total_rows, 'POD_ID'] = pod_id
-            table.loc[total_rows, 'NODE_ID'] = node_id
-            table.loc[total_rows, 'INTERFACE'] = interface
-            table.loc[total_rows, crc] = val
-    for k in range(i+1, len(file1_list), 2):
-        val = int(re.sub(r"[\n\t]*", "", file1_list[k+1].split(":")[1]))
-        key = (re.sub(r"[\n\t]*", "",
-                      file1_list[k].split(":")[1])).lstrip()
-        if "phys" in key:
-            interface = (
-                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
-            interface = interface.replace("]", "")
-            pod_id = re.search('pod-\d*', key).group().split('-')[1]
-            node_id = re.search('node-\d*', key).group().split('-')[1]
-            index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                              & (table.INTERFACE == interface)]
-            if index.empty:  # If there are no CRC and FCS occurred, initial table formation starts only in this part
-                # Get the total number of rows to append new row
+    if file1_list[0].startswith("#CRC"):
+        for i in range(1, len(file1_list), 2):
+            # This condition is to break the loop if its finds FCS Errors or there is no CRC output in the file
+            if file1_list[i].startswith("#FCS"):
+                break
+            if len(file1_list[i].strip()) == 0:
+                break
+            try:
+                val = int(re.sub(r"[\n\t]*", "", file1_list[i].split(":")[1]))
+                key = (re.sub(r"[\n\t]*", "",
+                              file1_list[i+1].split(":")[1])).lstrip()
+            except:
+                print(colored(
+                    "!!!Please ensure the moquery collected are in proper format,please re-run poller script!!!", "yellow"))
+                sys.exit(0)
+            if "phys" in key:
+                pod_id = re.search('pod-\d*', key).group().split('-')[1]
+                node_id = re.search('node-\d*', key).group().split('-')[1]
+                interface = (
+                    re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
+                interface = interface.replace("]", "")
                 total_rows = table.shape[0]
                 table.loc[total_rows, 'POD_ID'] = pod_id
                 table.loc[total_rows, 'NODE_ID'] = node_id
                 table.loc[total_rows, 'INTERFACE'] = interface
-                table.loc[total_rows, crc] = 0
-                table.loc[index, fcs] = val
-            else:
+                table.loc[total_rows, crc] = val
+
+    if file1_list[0].startswith("#FCS") or file1_list[i].startswith("#FCS"):
+        # If file starts with FCS Output without CRC Errors
+        if file1_list[0].startswith("#FCS"):
+            start = 1
+        # If FCS output follows CRC Output
+        elif file1_list[i].startswith("#FCS"):
+            start = i+1
+
+        for k in range(start, len(file1_list), 2):
+
+            if len(file1_list[k].strip()) == 0:
+                break
+            try:
+                val = int(
+                    re.sub(r"[\n\t]*", "", file1_list[k+1].split(":")[1]))
+                key = (re.sub(r"[\n\t]*", "",
+                              file1_list[k].split(":")[1])).lstrip()
+            except:
+                print(colored(
+                    "!!!Please ensure the moquery collected are in proper format,please re-run poller script!!!", "yellow"))
+                sys.exit(0)
+            if "phys" in key:
+                interface = (
+                    re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
+                interface = interface.replace("]", "")
+                pod_id = re.search('pod-\d*', key).group().split('-')[1]
+                node_id = re.search('node-\d*', key).group().split('-')[1]
                 index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                                  & (table.INTERFACE == interface)].index[0]
-                table.loc[index, fcs] = val
+                                  & (table.INTERFACE == interface)]
+                if index.empty:  # If there are no CRC and FCS occurred, initial table formation starts only in this part
+                    # Get the total number of rows to append new row
+                    total_rows = table.shape[0]
+                    table.loc[total_rows, 'POD_ID'] = pod_id
+                    table.loc[total_rows, 'NODE_ID'] = node_id
+                    table.loc[total_rows, 'INTERFACE'] = interface
+                    table.loc[total_rows, crc] = 0
+                    table.loc[total_rows, fcs] = val
+                else:
+                    index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
+                                      & (table.INTERFACE == interface)].index[0]
+                    table.loc[index, fcs] = val
 
 #Function to parse the second input file
 def parse_file2(file2):
     fp = open(LOCAL_PATH+file2, "r")
     file2_list = fp.readlines()
-    for i in range(1, len(file2_list), 2):
-        # This condition is to break the loop if its finds FCS Errors or there is no CRC output in the file
-        if file2_list[i].startswith("#FCS") or file2_list[i-1].startswith("#FCS"):
-            break
-        val = int(re.sub(r"[\n\t]*", "", file2_list[i].split(":")[1]))
-        key = (re.sub(r"[\n\t]*", "",
-                      file2_list[i+1].split(":")[1])).lstrip()
-        if "phys" in key:
-            pod_id = re.search('pod-\d*', key).group().split('-')[1]
-            node_id = re.search('node-\d*', key).group().split('-')[1]
-            interface = (
-                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
-            interface = interface.replace("]", "")
-            index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                              & (table.INTERFACE == interface)]
-            if index.empty:  # If there are no CRC and FCS occurred in the particular interface, the interface is added to the table only here
-                # Get the total number of rows to append new row
-                total_rows = table.shape[0]
-                table.loc[total_rows, 'POD_ID'] = pod_id
-                table.loc[total_rows, 'NODE_ID'] = node_id
-                table.loc[total_rows, 'INTERFACE'] = interface
-                table.loc[total_rows, crc] = 0
-                table.loc[total_rows, fcs] = 0
-                table.loc[total_rows, crc_diff] = val - \
-                    table.loc[total_rows, crc]
-            else:
+    if file2_list[0].startswith("#CRC"):
+        for i in range(1, len(file2_list), 2):
+            # This condition is to break the loop if its finds FCS Errors or there is no CRC output in the file
+            if file2_list[i].startswith("#FCS"):
+                break
+            if len(file2_list[i].strip()) == 0:
+                break
+            try:
+                val = int(re.sub(r"[\n\t]*", "", file2_list[i].split(":")[1]))
+                key = (re.sub(r"[\n\t]*", "",
+                              file2_list[i+1].split(":")[1])).lstrip()
+            except:
+                print(colored(
+                    "!!!Please ensure the moquery collected are in proper format,please re-run poller script!!!", "yellow"))
+                sys.exit(0)
+            if "phys" in key:
+                pod_id = re.search('pod-\d*', key).group().split('-')[1]
+                node_id = re.search('node-\d*', key).group().split('-')[1]
+                interface = (
+                    re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
+                interface = interface.replace("]", "")
                 index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                                  & (table.INTERFACE == interface)].index[0]
-                table.loc[index, crc_diff] = val-table.loc[index, crc]
-    for k in range(i+1, len(file2_list), 2):
-        val = int(re.sub(r"[\n\t]*", "", file2_list[k+1].split(":")[1]))
-        key = (re.sub(r"[\n\t]*", "",
-                      file2_list[k].split(":")[1])).lstrip()
-        if "phys" in key:
-            interface = (
-                re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
-            interface = interface.replace("]", "")
-            pod_id = re.search('pod-\d*', key).group().split('-')[1]
-            node_id = re.search('node-\d*', key).group().split('-')[1]
-            index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                              & (table.INTERFACE == interface)]
-            if index.empty:  # If there are no CRC and FCS occurred in the particular interface, the interface is added to the table only here
-                # Get the total number of rows to append new row
-                total_rows = table.shape[0]
-                table.loc[total_rows, 'POD_ID'] = pod_id
-                table.loc[total_rows, 'NODE_ID'] = node_id
-                table.loc[total_rows, 'INTERFACE'] = interface
-                table.loc[total_rows, crc] = 0
-                table.loc[total_rows, fcs] = 0
-                table.loc[total_rows, crc_diff] = 0
-                table.loc[index, fcs_diff] = val
-            else:
-                index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
-                                  & (table.INTERFACE == interface)].index[0]
+                                  & (table.INTERFACE == interface)]
+                if index.empty:  # If there are no CRC and FCS occurred in the particular interface, the interface is added to the table only here
+                    # Get the total number of rows to append new row
+                    total_rows = table.shape[0]
+                    table.loc[total_rows, 'POD_ID'] = pod_id
+                    table.loc[total_rows, 'NODE_ID'] = node_id
+                    table.loc[total_rows, 'INTERFACE'] = interface
+                    table.loc[total_rows, crc] = 0
+                    table.loc[total_rows, fcs] = 0
+                    table.loc[total_rows, crc_diff] = val - \
+                        table.loc[total_rows, crc]
+                else:
+                    index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
+                                      & (table.INTERFACE == interface)].index[0]
 
-                table.loc[index, fcs_diff] = val-table.loc[index, fcs]
+                    table.loc[index, crc_diff] = val-table.loc[index, crc]
+
+    if file2_list[0].startswith("#FCS") or file2_list[i].startswith("#FCS"):
+        if file2_list[0].startswith("#FCS"):
+            start = 1
+        elif file2_list[i].startswith("#FCS"):
+            start = i+1
+        for k in range(start, len(file2_list), 2):
+            if len(file2_list[k].strip()) == 0:
+                break
+            try:
+                val = int(
+                    re.sub(r"[\n\t]*", "", file2_list[k+1].split(":")[1]))
+                key = (re.sub(r"[\n\t]*", "",
+                              file2_list[k].split(":")[1])).lstrip()
+            except:
+                print(colored(
+                    "!!!Please ensure the moquery collected are in proper format,please re-run poller script!!!", "yellow"))
+                sys.exit(0)
+            if "phys" in key:
+                interface = (
+                    re.search('phys-\[\w*/\d*(/\d*)?\]', key).group().split('-')[1]).replace("[", "")
+                interface = interface.replace("]", "")
+                pod_id = re.search('pod-\d*', key).group().split('-')[1]
+                node_id = re.search('node-\d*', key).group().split('-')[1]
+                index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
+                                  & (table.INTERFACE == interface)]
+                if index.empty:  # If there are no CRC and FCS occurred in the particular interface, the interface is added to the table only here
+                    # Get the total number of rows to append new row
+                    total_rows = table.shape[0]
+                    table.loc[total_rows, 'POD_ID'] = pod_id
+                    table.loc[total_rows, 'NODE_ID'] = node_id
+                    table.loc[total_rows, 'INTERFACE'] = interface
+                    table.loc[total_rows, crc] = 0
+                    table.loc[total_rows, fcs] = 0
+                    table.loc[total_rows, crc_diff] = 0
+                    table.loc[total_rows, fcs_diff] = val
+                else:
+                    index = table.loc[(table.POD_ID == pod_id) & (table.NODE_ID == node_id)
+                                      & (table.INTERFACE == interface)].index[0]
+
+                    table.loc[index, fcs_diff] = val-table.loc[index, fcs]
 
 #Function to fetch the node name and role
 def assign_node():
-    for k in range(0, table.shape[0]):
-        node_query = "moquery -c fabricNode -f 'fabric.Node.id==" + \
-            '"'+table.loc[k, 'NODE_ID']+'"'+"'"+' | egrep "id|name|role"'
-        stdin, stdout, stderr = ssh.exec_command(node_query)
-        out = stdout.readlines()
-        name = (re.sub(r"[\n\t]*", "",
-                       out[1].split(":")[1])).lstrip()
-        role = (re.sub(r"[\n\t]*", "",
-                       out[3].split(":")[1])).lstrip()
-        table.loc[k, 'NODE_NAME'] = name
-        table.loc[k, 'NODE_ROLE'] = role
+    try:
+        for k in range(0, table.shape[0]):
+            node_query = "moquery -c fabricNode -f 'fabric.Node.id==" + \
+                '"'+table.loc[k, 'NODE_ID']+'"'+"'"+' | egrep "id|name|role"'
+            stdin, stdout, stderr = ssh.exec_command(node_query)
+            out = stdout.readlines()
+            name = (re.sub(r"[\n\t]*", "",
+                           out[1].split(":")[1])).lstrip()
+            role = (re.sub(r"[\n\t]*", "",
+                           out[3].split(":")[1])).lstrip()
+            table.loc[k, 'NODE_NAME'] = name
+            table.loc[k, 'NODE_ROLE'] = role
+    except:
+        print(colored(
+            "!!!Please ensure the files are collected from the same APIC as provided in input for this script!!!", "yellow"))
+        sys.exit(0)
+        
 
 #Function to execute the LLDP/CP neighbor moquery and fill the table
 def assign_neighbors():
